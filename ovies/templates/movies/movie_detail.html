@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ movie.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'movies:movie_list' %}">Фильмы</a></li>
+            <li class="breadcrumb-item active">{{ movie.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Левая колонка -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h1 class="card-title mb-1">{{ movie.title }}</h1>
+                            <h4 class="card-subtitle text-muted">{{ movie.director }} ({{ movie.release_year }})</h4>
+                        </div>
+                        {% if user == movie.added_by or user.is_staff %}
+                        <div class="btn-group">
+                            <a href="{% url 'movies:movie_update' movie.pk %}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit"></i> Редактировать
+                            </a>
+                            <a href="{% url 'movies:movie_delete' movie.pk %}" class="btn btn-outline-danger">
+                                <i class="fas fa-trash"></i> Удалить
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Жанр и рейтинг -->
+                    <div class="d-flex align-items-center mb-3">
+                        {% if movie.genre %}
+                            <span class="badge bg-primary me-3">{{ movie.genre.name }}</span>
+                        {% endif %}
+
+                        {% if movie.average_rating > 0 %}
+                            <div class="rating-stars">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= movie.average_rating %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="ms-1">{{ movie.average_rating|floatformat:1 }}</span>
+                                <small class="text-muted ms-2">({{ movie.review_count }} отзывов)</small>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Описание -->
+                    {% if movie.description %}
+                        <div class="mb-4">
+                            <h5>Описание</h5>
+                            <p class="card-text">{{ movie.description|linebreaks }}</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Информация -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Добавил</span>
+                                    <span>{{ movie.added_by.username }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Дата добавления</span>
+                                    <span>{{ movie.created_at|date:"d.m.Y H:i" }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Последнее обновление</span>
+                                    <span>{{ movie.updated_at|date:"d.m.Y H:i" }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Год выпуска</span>
+                                    <span>{{ movie.release_year }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Отзывы -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-comments"></i> Отзывы</h5>
+                    {% if user.is_authenticated %}
+                        <a href="#" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addReviewModal">
+                            <i class="fas fa-plus"></i> Добавить отзыв
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if reviews %}
+                        {% for review in reviews %}
+                            <div class="border-bottom pb-3 mb-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">{{ review.user.username }}</h6>
+                                        <div class="text-warning mb-2">
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= review.rating %}
+                                                    <i class="fas fa-star"></i>
+                                                {% else %}
+                                                    <i class="far fa-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                            <small class="text-muted ms-2">{{ review.created_at|date:"d.m.Y" }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if review.text %}
+                                    <p class="mb-0">{{ review.text|linebreaks }}</p>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center mb-0">
+                            <i class="fas fa-comment-slash fa-2x mb-2 d-block"></i>
+                            Пока нет отзывов. Будьте первым!
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Правая колонка -->
+        <div class="col-lg-4">
+            <div class="sticky-top" style="top: 20px;">
+                <!-- Постер -->
+                <div class="card mb-4">
+                    {% if movie.poster %}
+                        <img src="{{ movie.poster.url }}" class="card-img-top" alt="{{ movie.title }}">
+                    {% else %}
+                        <div class="text-center p-5 bg-light">
+                            <i class="fas fa-film fa-5x text-muted mb-3"></i>
+                            <p class="text-muted">Постер не загружен</p>
+                        </div>
+                    {% endif %}
+                    <div class="card-body text-center">
+                        {% if user.is_authenticated %}
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addReviewModal">
+                                    <i class="fas fa-star"></i> Оценить фильм
+                                </button>
+                                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addToCollectionModal">
+                                    <i class="fas fa-plus"></i> В подборку
+                                </button>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                Войдите, чтобы оставлять отзывы и добавлять фильмы в подборки
+                            </div>
+                            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary">
+                                Войти
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Похожие фильмы -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Похожие фильмы</h6>
+                    </div>
+                    <div class="card-body">
+                        {% if movie.genre %}
+                            {% with similar_movies=movie.genre.movie_set.all %}
+                                {% if similar_movies %}
+                                    {% for similar in similar_movies %}
+                                        {% if similar.pk != movie.pk %}
+                                            <div class="mb-2">
+                                                <a href="{% url 'movies:movie_detail' similar.pk %}" class="text-decoration-none">
+                                                    {{ similar.title }} ({{ similar.release_year }})
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    {% empty %}
+                                        <p class="text-muted mb-0">Нет похожих фильмов</p>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted mb-0">Нет похожих фильмов</p>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <p class="text-muted mb-0">У фильма не указан жанр</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для добавления отзыва -->
+{% if user.is_authenticated %}
+<div class="modal fade" id="addReviewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить отзыв</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="#">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Рейтинг</label>
+                        <div>
+                            {% for i in "12345" %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="rating" id="rating{{ forloop.counter }}" value="{{ forloop.counter }}">
+                                    <label class="form-check-label" for="rating{{ forloop.counter }}">
+                                        {% for star in "12345" %}
+                                            {% if forloop.parentloop.counter >= forloop.counter %}
+                                                <i class="fas fa-star text-warning"></i>
+                                            {% else %}
+                                                <i class="far fa-star text-warning"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Текст отзыва</label>
+                        <textarea name="text" class="form-control" rows="4"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить отзыв</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

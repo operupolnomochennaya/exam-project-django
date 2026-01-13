@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Фильмы{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Коллекция фильмов</h1>
+    
+    <!-- Поиск и сортировка -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-8">
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Поиск по названию, режиссеру, жанру или году..." 
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="sort" class="form-select">
+                        <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>Новые</option>
+                        <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Название А-Я</option>
+                        <option value="-title" {% if sort_by == '-title' %}selected{% endif %}>Название Я-А</option>
+                        <option value="release_year" {% if sort_by == 'release_year' %}selected{% endif %}>Год ↑</option>
+                        <option value="-release_year" {% if sort_by == '-release_year' %}selected{% endif %}>Год ↓</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Применить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Кнопка добавления -->
+    <div class="mb-4">
+        <a href="{% url 'movies:movie_create' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Добавить фильм
+        </a>
+    </div>
+    
+    <!-- Список фильмов -->
+    {% if movies %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for movie in movies %}
+            <div class="col">
+                <div class="card h-100">
+                    {% if movie.poster %}
+                        <img src="{{ movie.poster.url }}" class="card-img-top" alt="{{ movie.title }}" style="height: 300px; object-fit: cover;">
+                    {% else %}
+                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 300px;">
+                            <i class="fas fa-film fa-3x text-light"></i>
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ movie.title }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ movie.director }} ({{ movie.release_year }})</h6>
+                        
+                        {% if movie.genre %}
+                            <span class="badge bg-primary">{{ movie.genre.name }}</span>
+                        {% endif %}
+                        
+                        <p class="card-text mt-2">{{ movie.description|truncatewords:20 }}</p>
+                        
+                        <!-- Рейтинг -->
+                        {% if movie.average_rating > 0 %}
+                            <div class="mb-2">
+                                <small class="text-warning">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= movie.average_rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    ({{ movie.review_count }})
+                                </small>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'movies:movie_detail' movie.pk %}" class="btn btn-sm btn-outline-primary">
+                                Подробнее
+                            </a>
+                            {% if user == movie.added_by or user.is_staff %}
+                                <div>
+                                    <a href="{% url 'movies:movie_update' movie.pk %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'movies:movie_delete' movie.pk %}" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Пагинация -->
+        {% if is_paginated %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by != '-created_at' %}&sort={{ sort_by }}{% endif %}">
+                            Первая
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by != '-created_at' %}&sort={{ sort_by }}{% endif %}">
+                            ←
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by != '-created_at' %}&sort={{ sort_by }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by != '-created_at' %}&sort={{ sort_by }}{% endif %}">
+                            →
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by != '-created_at' %}&sort={{ sort_by }}{% endif %}">
+                            Последняя
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Фильмы не найдены. Будьте первым, кто добавит фильм!
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

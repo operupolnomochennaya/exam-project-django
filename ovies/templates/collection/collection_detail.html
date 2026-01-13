@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ collection.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'collections:collection_list' %}">Подборки</a></li>
+            <li class="breadcrumb-item active">{{ collection.title }}</li>
+        </ol>
+    </nav>
+    
+    <div class="row">
+        <!-- Основная информация -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h1 class="card-title mb-1">{{ collection.title }}</h1>
+                            <h4 class="card-subtitle text-muted">
+                                Создатель: {{ collection.creator.username }}
+                            </h4>
+                        </div>
+                        {% if user == collection.creator or user.is_staff %}
+                        <div class="btn-group">
+                            <a href="{% url 'collections:collection_update' collection.pk %}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit"></i> Редактировать
+                            </a>
+                            <a href="{% url 'collections:collection_delete' collection.pk %}" class="btn btn-outline-danger">
+                                <i class="fas fa-trash"></i> Удалить
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Статус и количество фильмов -->
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-primary me-3">
+                            <i class="fas fa-film"></i> {{ collection.movie_count }} фильмов
+                        </span>
+                        {% if collection.is_public %}
+                            <span class="badge bg-success">Публичная подборка</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Приватная подборка</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Описание -->
+                    {% if collection.description %}
+                        <div class="mb-4">
+                            <h5>Описание</h5>
+                            <p class="card-text">{{ collection.description|linebreaks }}</p>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Информация -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Создатель</span>
+                                    <span>{{ collection.creator.username }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Дата создания</span>
+                                    <span>{{ collection.created_at|date:"d.m.Y H:i" }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Последнее обновление</span>
+                                    <span>{{ collection.updated_at|date:"d.m.Y H:i" }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Статус</span>
+                                    <span>
+                                        {% if collection.is_public %}
+                                            Публичная
+                                        {% else %}
+                                            Приватная
+                                        {% endif %}
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Фильмы в подборке -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-film"></i> Фильмы в подборке</h5>
+                </div>
+                <div class="card-body">
+                    {% if movies %}
+                        <div class="row row-cols-1 row-cols-md-2 g-4">
+                            {% for movie in movies %}
+                            <div class="col">
+                                <div class="card h-100">
+                                    {% if movie.poster %}
+                                        <img src="{{ movie.poster.url }}" class="card-img-top" alt="{{ movie.title }}" style="height: 200px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                            <i class="fas fa-film fa-2x text-light"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ movie.title }}</h6>
+                                        <p class="card-text text-muted small">{{ movie.director }} ({{ movie.release_year }})</p>
+                                        <a href="{% url 'movies:movie_detail' movie.pk %}" class="btn btn-sm btn-outline-primary">
+                                            Подробнее
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center mb-0">
+                            <i class="fas fa-film fa-2x mb-2 d-block"></i>
+                            В этой подборке пока нет фильмов
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Правая колонка -->
+        <div class="col-lg-4">
+            <div class="sticky-top" style="top: 20px;">
+                <!-- Действия -->
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        {% if user.is_authenticated %}
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'collections:collection_update' collection.pk %}" class="btn btn-primary">
+                                    <i class="fas fa-edit"></i> Редактировать подборку
+                                </a>
+                                <a href="{% url 'movies:movie_create' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-plus"></i> Добавить новый фильм
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                Войдите, чтобы редактировать подборки
+                            </div>
+                            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary">
+                                Войти
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Похожие подборки -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Другие подборки</h6>
+                    </div>
+                    <div class="card-body">
+                        {% with similar_collections=collection.creator.collections.exclude(pk=collection.pk).filter(is_public=True).order_by('-created_at')|slice:":3" %}
+                            {% if similar_collections %}
+                                {% for similar in similar_collections %}
+                                    <div class="mb-2">
+                                        <a href="{% url 'collections:collection_detail' similar.pk %}" class="text-decoration-none">
+                                            {{ similar.title }}
+                                        </a>
+                                        <small class="text-muted d-block">{{ similar.movie_count }} фильмов</small>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted mb-0">Нет других подборок</p>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
